@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(page_title="Trader Intelligence", layout="wide")
 
 st.title("🧠 Trader Market Intelligence")
-st.caption("Bias first. Execution later.")
+st.caption("Bias + Market State (Closed candle logic)")
 
 # ---------------- SIDEBAR ----------------
 instrument = st.sidebar.selectbox(
@@ -38,37 +38,65 @@ if st.sidebar.button("Analyze Market"):
 
     latest = df.tail(1).iloc[0]
 
-    # ✅ SAFE SCALAR VALUES
+    # ---- SAFE SCALARS ----
     close = float(latest["Close"])
     ema50 = float(latest["EMA50"])
     ema200 = float(latest["EMA200"])
 
-    # ---------------- BIAS LOGIC ----------------
+    # ---------------- BIAS ----------------
     if close > ema50 and ema50 > ema200:
         bias = "BULLISH"
-        instruction = "Only look for BUY setups"
-        color = "green"
+        bias_color = "green"
+        bias_instruction = "Only look for BUY setups"
     elif close < ema50 and ema50 < ema200:
         bias = "BEARISH"
-        instruction = "Only look for SELL setups"
-        color = "red"
+        bias_color = "red"
+        bias_instruction = "Only look for SELL setups"
     else:
         bias = "NO-TRADE"
-        instruction = "Market is mixed. Stay out."
-        color = "orange"
+        bias_color = "orange"
+        bias_instruction = "Market structure mixed. Stay out."
+
+    # ---------------- MARKET STATE ----------------
+    separation_pct = abs(ema50 - ema200) / close * 100
+
+    if separation_pct > 0.5:
+        market_state = "TRENDING"
+        state_color = "green"
+        state_instruction = "Trend is healthy. Trend-following trades allowed."
+    else:
+        market_state = "RANGE"
+        state_color = "orange"
+        state_instruction = "Market is compressed. Avoid aggressive trades."
 
     # ---------------- OUTPUT ----------------
-    st.subheader(f"{instrument} — Market Bias")
+    st.subheader(f"{instrument} — Market Intelligence")
 
-    st.markdown(
-        f"""
-        <h1 style='color:{color};'>{bias}</h1>
-        <h4>{instruction}</h4>
-        """,
-        unsafe_allow_html=True
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(
+            f"""
+            <h3>Market Bias</h3>
+            <h1 style='color:{bias_color};'>{bias}</h1>
+            <p>{bias_instruction}</p>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        st.markdown(
+            f"""
+            <h3>Market State</h3>
+            <h1 style='color:{state_color};'>{market_state}</h1>
+            <p>{state_instruction}</p>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.caption(
+        "Bias & State calculated using EMA 50 & EMA 200 on daily closed candles"
     )
-
-    st.caption("Bias calculated using EMA 50 & EMA 200 on daily closed candles")
 
 else:
     st.info("👈 Select index and click **Analyze Market**")
