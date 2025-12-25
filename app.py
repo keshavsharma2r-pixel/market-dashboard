@@ -38,12 +38,17 @@ if st.sidebar.button("Analyze Market"):
 
     latest = df.tail(1).iloc[0]
 
+    # ✅ SAFE SCALAR VALUES
+    close = float(latest["Close"])
+    ema50 = float(latest["EMA50"])
+    ema200 = float(latest["EMA200"])
+
     # ---------------- BIAS LOGIC ----------------
-    if latest["Close"] > latest["EMA50"] > latest["EMA200"]:
+    if close > ema50 and ema50 > ema200:
         bias = "BULLISH"
         instruction = "Only look for BUY setups"
         color = "green"
-    elif latest["Close"] < latest["EMA50"] < latest["EMA200"]:
+    elif close < ema50 and ema50 < ema200:
         bias = "BEARISH"
         instruction = "Only look for SELL setups"
         color = "red"
