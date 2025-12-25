@@ -1,14 +1,13 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import altair as alt
 
-st.set_page_config(page_title="Market Dashboard", layout="wide")
+st.set_page_config(page_title="Trader Intelligence", layout="wide")
 
-st.title("📊 Market Dashboard")
-st.caption("Step 1: Price vs EMA (Clear View)")
+st.title("🧠 Trader Market Intelligence")
+st.caption("Bias first. Execution later.")
 
-# Sidebar
+# ---------------- SIDEBAR ----------------
 instrument = st.sidebar.selectbox(
     "Select Index",
     ["NIFTY 50", "SENSEX"]
@@ -19,44 +18,52 @@ symbol_map = {
     "SENSEX": "^BSESN"
 }
 
-if st.sidebar.button("Load Data"):
+if st.sidebar.button("Analyze Market"):
 
     df = yf.download(
         symbol_map[instrument],
-        period="1y",
+        period="3y",
         interval="1d"
     )
 
     if df is None or df.empty:
-        st.error("No data received.")
+        st.error("Data not available")
         st.stop()
 
-    # EMA
-    df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
-    df = df.reset_index()
+    # ---------------- EMA ----------------
+    df["EMA50"] = df["Close"].ewm(span=50, adjust=False).mean()
+    df["EMA200"] = df["Close"].ewm(span=200, adjust=False).mean()
 
-    st.success("Data loaded successfully")
+    df = df.dropna()
 
-    # ----- PRICE LINE -----
-    price_line = alt.Chart(df).mark_line(color="black").encode(
-        x="Date:T",
-        y="Close:Q",
-        tooltip=["Date:T", "Close:Q"]
+    latest = df.tail(1).iloc[0]
+
+    # ---------------- BIAS LOGIC ----------------
+    if latest["Close"] > latest["EMA50"] > latest["EMA200"]:
+        bias = "BULLISH"
+        instruction = "Only look for BUY setups"
+        color = "green"
+    elif latest["Close"] < latest["EMA50"] < latest["EMA200"]:
+        bias = "BEARISH"
+        instruction = "Only look for SELL setups"
+        color = "red"
+    else:
+        bias = "NO-TRADE"
+        instruction = "Market is mixed. Stay out."
+        color = "orange"
+
+    # ---------------- OUTPUT ----------------
+    st.subheader(f"{instrument} — Market Bias")
+
+    st.markdown(
+        f"""
+        <h1 style='color:{color};'>{bias}</h1>
+        <h4>{instruction}</h4>
+        """,
+        unsafe_allow_html=True
     )
 
-    # ----- EMA LINE -----
-    ema_line = alt.Chart(df).mark_line(color="red").encode(
-        x="Date:T",
-        y="EMA20:Q",
-        tooltip=["Date:T", "EMA20:Q"]
-    )
-
-    chart = (price_line + ema_line).properties(
-        height=450,
-        title=f"{instrument} — Price (Black) vs EMA 20 (Red)"
-    )
-
-    st.altair_chart(chart, use_container_width=True)
+    st.caption("Bias calculated using EMA 50 & EMA 200 on daily closed candles")
 
 else:
-    st.info("👈 Select index and click **Load Data**")
+    st.info("👈 Select index and click **Analyze Market**")
