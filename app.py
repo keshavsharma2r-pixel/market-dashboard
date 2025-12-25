@@ -1,14 +1,14 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import altair as alt
 
-# ---------------- PAGE SETUP ----------------
 st.set_page_config(page_title="Market Dashboard", layout="wide")
 
 st.title("📊 Market Dashboard")
-st.caption("Step 1: Price + EMA")
+st.caption("Step 1: Price vs EMA (Clear View)")
 
-# ---------------- SIDEBAR ----------------
+# Sidebar
 instrument = st.sidebar.selectbox(
     "Select Index",
     ["NIFTY 50", "SENSEX"]
@@ -19,10 +19,7 @@ symbol_map = {
     "SENSEX": "^BSESN"
 }
 
-# ---------------- ACTION ----------------
 if st.sidebar.button("Load Data"):
-
-    st.info("Fetching market data...")
 
     df = yf.download(
         symbol_map[instrument],
@@ -34,20 +31,32 @@ if st.sidebar.button("Load Data"):
         st.error("No data received.")
         st.stop()
 
-    st.success("Data loaded successfully ✅")
-
-    # ---------------- EMA CALCULATION ----------------
+    # EMA
     df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
+    df = df.reset_index()
 
-    # ---------------- DISPLAY ----------------
-    st.subheader(f"{instrument} Price with EMA 20")
+    st.success("Data loaded successfully")
 
-    chart_df = df[["Close", "EMA20"]]
+    # ----- PRICE LINE -----
+    price_line = alt.Chart(df).mark_line(color="black").encode(
+        x="Date:T",
+        y="Close:Q",
+        tooltip=["Date:T", "Close:Q"]
+    )
 
-    st.line_chart(chart_df)
+    # ----- EMA LINE -----
+    ema_line = alt.Chart(df).mark_line(color="red").encode(
+        x="Date:T",
+        y="EMA20:Q",
+        tooltip=["Date:T", "EMA20:Q"]
+    )
 
-    st.subheader("Latest Data")
-    st.dataframe(df.tail())
+    chart = (price_line + ema_line).properties(
+        height=450,
+        title=f"{instrument} — Price (Black) vs EMA 20 (Red)"
+    )
+
+    st.altair_chart(chart, use_container_width=True)
 
 else:
     st.info("👈 Select index and click **Load Data**")
