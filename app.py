@@ -2,12 +2,13 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
+# ---------------- PAGE SETUP ----------------
 st.set_page_config(page_title="Market Dashboard", layout="wide")
 
 st.title("📊 Market Dashboard")
-st.caption("Step 0: Data loading check")
+st.caption("Step 1: Price + EMA")
 
-# Sidebar
+# ---------------- SIDEBAR ----------------
 instrument = st.sidebar.selectbox(
     "Select Index",
     ["NIFTY 50", "SENSEX"]
@@ -18,6 +19,7 @@ symbol_map = {
     "SENSEX": "^BSESN"
 }
 
+# ---------------- ACTION ----------------
 if st.sidebar.button("Load Data"):
 
     st.info("Fetching market data...")
@@ -34,11 +36,18 @@ if st.sidebar.button("Load Data"):
 
     st.success("Data loaded successfully ✅")
 
-    st.write("Last 5 rows of data:")
-    st.dataframe(df.tail())
+    # ---------------- EMA CALCULATION ----------------
+    df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
 
-    st.subheader("Price Chart")
-    st.line_chart(df["Close"])
+    # ---------------- DISPLAY ----------------
+    st.subheader(f"{instrument} Price with EMA 20")
+
+    chart_df = df[["Close", "EMA20"]]
+
+    st.line_chart(chart_df)
+
+    st.subheader("Latest Data")
+    st.dataframe(df.tail())
 
 else:
     st.info("👈 Select index and click **Load Data**")
