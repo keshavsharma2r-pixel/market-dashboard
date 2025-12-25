@@ -17,22 +17,27 @@ timeframe = st.sidebar.selectbox(
 )
 
 limit_map = {
-    "1m": 100,
-    "5m": 100,
-    "15m": 100
+    "1m": 200,
+    "5m": 200,
+    "15m": 200
 }
 
-# ---------------- BINANCE API ----------------
+# ---------------- BINANCE API (SAFE ENDPOINT) ----------------
 @st.cache_data(ttl=10)
 def fetch_candles(symbol, interval, limit):
-    url = "https://api.binance.com/api/v3/klines"
+    url = "https://data.binance.com/api/v3/klines"
     params = {
         "symbol": symbol,
         "interval": interval,
         "limit": limit
     }
-    response = requests.get(url, params=params, timeout=10)
-    data = response.json()
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        return None
 
     df = pd.DataFrame(data, columns=[
         "open_time", "Open", "High", "Low", "Close", "Volume",
@@ -51,8 +56,9 @@ st.info("Live data refreshes every 10 seconds")
 df = fetch_candles(symbol, timeframe, limit_map[timeframe])
 
 if df is None or df.empty:
-    st.error("Failed to fetch data from Binance")
-    st.stop()
+    st.error("❌ Unable to fetch live data from Binance. Retrying…")
+    time.sleep(5)
+    st.rerun()
 
 # ---------------- DISPLAY ----------------
 st.subheader(f"BTCUSDT — {timeframe} Live Candles")
